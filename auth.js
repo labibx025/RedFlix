@@ -268,5 +268,37 @@ function uploadProfilePicture() {
     reader.readAsDataURL(file);
 }
 
+// Google Authentication
+googleLoginBtn.addEventListener('click', async () => {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      const result = await auth.signInWithPopup(provider);
+      
+      // Check if user is new
+      if (result.additionalUserInfo?.isNewUser) {
+        await db.collection('users').doc(result.user.uid).set({
+          name: result.user.displayName,
+          email: result.user.email,
+          photoURL: result.user.photoURL,
+          moviesWatched: 0,
+          moviesInList: 0,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      
+      closeAuthModal();
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      loginError.textContent = error.message;
+      
+      // Specific error handling
+      if (error.code === 'auth/popup-closed-by-user') {
+        loginError.textContent = 'Sign in popup was closed';
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        loginError.textContent = 'Sign in cancelled';
+      }
+    }
+  });
+
 // Initialize auth listeners
 setupAuthListeners();

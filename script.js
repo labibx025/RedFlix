@@ -133,22 +133,42 @@ function displayMovies(movies, element) {
 }
 
 // Show movie details in hero section
-function showMovieDetails(movie) {
-    if (movie.backdrop_path) {
+async function showMovieDetails(movie) {
+    try {
+      // Fetch additional details
+      const [details, credits, videos] = await Promise.all([
+        fetch(`${BASE_URL}/movie/${movie.id}?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${BASE_URL}/movie/${movie.id}/credits?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${BASE_URL}/movie/${movie.id}/videos?api_key=${API_KEY}`).then(res => res.json())
+      ]);
+      
+      // Update hero section
+      heroTitle.textContent = movie.title;
+      heroOverview.textContent = movie.overview || 'No overview available';
+      
+      if (movie.backdrop_path) {
         heroSection.style.backgroundImage = `url(${IMG_BASE_URL}${movie.backdrop_path})`;
-    } else {
-        heroSection.style.backgroundImage = 'linear-gradient(to right, #141414, #333)';
+      }
+      
+      // Update buttons
+      const playBtn = document.querySelector('.play-btn');
+      const infoBtn = document.querySelector('.info-btn');
+      
+      playBtn.onclick = () => {
+        const trailer = videos.results.find(v => v.type === 'Trailer');
+        if (trailer) {
+          window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank');
+        } else {
+          alert('No trailer available for this movie');
+        }
+      };
+      
+      infoBtn.onclick = () => showMovieModal(movie, details, credits);
+      
+    } catch (error) {
+      console.error('Error loading movie details:', error);
     }
-    heroTitle.textContent = movie.title;
-    heroOverview.textContent = movie.overview || 'No overview available';
-    
-    // Update buttons
-    const playBtn = document.querySelector('.play-btn');
-    const infoBtn = document.querySelector('.info-btn');
-    playBtn.onclick = () => playMovie(movie);
-    infoBtn.onclick = () => showMovieModal(movie);
-}
-
+  }
 // In your playMovie function:
 function playMovie(movie) {
     currentVideo = movie;
@@ -278,6 +298,116 @@ function showError(message = 'Failed to load content') {
         }
     });
 }
+
+// Search functionality
+let searchTimeout;
+
+searchBtn.addEventListener('click', () => {
+  searchModal.style.display = 'flex';
+  searchInput.focus();
+  document.body.style.overflow = 'hidden';
+});
+
+closeSearch.addEventListener('click', () => {
+  searchModal.style.display = 'none';
+  document.body.style.overflow = 'auto';
+});
+
+searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const query = e.target.value.trim();
+  
+  if (query.length < 2) {
+    searchResults.innerHTML = '';
+    return;
+  }
+  
+  searchTimeout = setTimeout(() => {
+    searchMovies(query);
+  }, 300);
+});
+
+searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    searchMovies(searchInput.value.trim());
+  }
+});
+
+async function searchMovies(query) {
+  try {
+    const response = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
+    const data = await response.json();
+    
+    searchResults.innerHTML = '';
+    
+    if (data.results.length === 0) {
+      searchResults.innerHTML = '<p>No results found</p>';
+      return;
+    }
+    
+    data.results.forEach(item => {
+      if (item.poster_path) {
+        const result = document.createElement('div');
+        result.className = 'search-result';
+        result.innerHTML = `
+          <img src="${IMG_BASE_URL}${item.poster_path}" alt="${item.title || item.name}">
+          <p>${item.title || item.name}</p>
+        `;
+        result.addEventListener('click', () => {
+          showMovieDetails(item);
+          searchModal.style.display = 'none';
+        });
+        searchResults.appendChild(result);
+      }
+    });
+  } catch (error) {
+    console.error('Search error:', error);
+    searchResults.innerHTML = '<p>Error searching movies</p>';
+  }
+}
+
+// Navigation functionality
+document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = e.target.textContent.trim();
+      
+      switch(section) {
+        case 'TV Shows':
+          fetchMovies(`${BASE_URL}/tv/popular?api_key=${API_KEY}`, trendingMoviesSection);
+          break;
+        case 'Movies':
+          fetchMovies(`${BASE_URL}/movie/popular?api_key=${API_KEY}`, popularMoviesSection);
+          break;
+        case 'New & Popular':
+          fetchMovies(`${BASE_URL}/trending/all/week?api_key=${API_KEY}`, upcomingMoviesSection);
+          break;
+        default:
+          // Home or other links
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  });
+
+  function createMovieCard(movie) {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+    card.innerHTML = `
+      <img src="${IMG_BASE_URL}${movie.poster_path}" 
+           onerror="this.src='https://via.placeholder.com/300x450?text=Poster+Not+Available'"
+           alt="${movie.title || movie.name}">
+      <div class="movie-info">
+        <h3>${movie.title || movie.name}</h3>
+        <p>${movie.release_date?.substring(0, 4) || movie.first_air_date?.substring(0, 4) || ''}</p>
+      </div>
+    `;
+    
+    card.addEventListener('click', () => {
+      showMovieDetails(movie);
+    });
+    
+    return card;
+  }
 
 // Show movie modal with details
 async function showMovieModal(movie) {
