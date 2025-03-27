@@ -149,22 +149,134 @@ function showMovieDetails(movie) {
     infoBtn.onclick = () => showMovieModal(movie);
 }
 
-// Play movie (sample implementation)
+// In your playMovie function:
 function playMovie(movie) {
     currentVideo = movie;
     videoTitle.textContent = movie.title;
     videoDescription.textContent = movie.overview || 'No description available';
     
-    // In a real app, you would fetch the actual video URL
-    videoPlayer.src = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-    
+    // Use YouTube trailer as fallback (replace with actual API call)
+    fetch(`${BASE_URL}/movie/${movie.id}/videos?api_key=${API_KEY}`)
+        .then(response => response.json())
+        .then(data => {
+            const trailer = data.results.find(v => v.type === 'Trailer');
+            if (trailer) {
+                videoPlayer.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1`;
+            } else {
+                videoPlayer.innerHTML = `
+                    <p>No trailer available</p>
+                    <iframe width="560" height="315" 
+                        src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                        frameborder="0" allowfullscreen></iframe>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching trailer:', error);
+            videoPlayer.innerHTML = '<p>Error loading video</p>';
+        });
+
     videoModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-    
-    // Play the video
-    setTimeout(() => {
-        videoPlayer.play().catch(e => console.log('Autoplay prevented:', e));
-    }, 300);
+}
+
+// Search functionality
+searchBtn.addEventListener('click', openSearchModal);
+searchInput.addEventListener('input', debounce(handleSearch, 300));
+
+function openSearchModal() {
+    searchModal.style.display = 'flex';
+    searchInput.focus();
+}
+
+function debounce(func, timeout = 300) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
+
+async function handleSearch(e) {
+    const query = e.target.value.trim();
+    if (query.length < 2) {
+        searchResults.innerHTML = '';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
+        const data = await response.json();
+        displaySearchResults(data.results);
+    } catch (error) {
+        console.error('Search error:', error);
+        searchResults.innerHTML = '<p>Error performing search</p>';
+    }
+}
+
+function displaySearchResults(results) {
+    searchResults.innerHTML = results
+        .filter(item => item.poster_path)
+        .map(item => `
+            <div class="search-result" data-id="${item.id}" data-type="${item.media_type}">
+                <img src="${IMG_BASE_URL}${item.poster_path}" alt="${item.title || item.name}">
+                <h4>${item.title || item.name}</h4>
+                <p>${item.release_date?.substring(0, 4) || ''}</p>
+            </div>
+        `).join('');
+
+    // Add click handlers
+    document.querySelectorAll('.search-result').forEach(result => {
+        result.addEventListener('click', () => {
+            const id = result.dataset.id;
+            const type = result.dataset.type;
+            fetchItemDetails(id, type);
+        });
+    });
+}
+
+async function init() {
+    showLoading();
+    try {
+        const [popularMovies, trending, topRated, upcoming, tvShows] = await Promise.all([
+            fetchMovies(`${BASE_URL}/movie/popular?api_key=${API_KEY}`, popularMoviesSection),
+            fetchMovies(`${BASE_URL}/trending/all/week?api_key=${API_KEY}`, trendingMoviesSection),
+            fetchMovies(`${BASE_URL}/movie/top_rated?api_key=${API_KEY}`, topRatedMoviesSection),
+            fetchMovies(`${BASE_URL}/movie/upcoming?api_key=${API_KEY}`, upcomingMoviesSection),
+            fetchMovies(`${BASE_URL}/tv/popular?api_key=${API_KEY}`, tvShowsSection)
+        ]);
+
+        // Set random hero movie
+        if (popularMovies.length > 0) {
+            showMovieDetails(popularMovies[Math.floor(Math.random() * popularMovies.length)]);
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showError();
+    } finally {
+        hideLoading();
+    }
+}
+
+async function fetchItemDetails(id, type) {
+    try {
+        const url = `${BASE_URL}/${type}/${id}?api_key=${API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        showMovieModal(data);
+    } catch (error) {
+        console.error('Error fetching details:', error);
+    }
+}
+
+function showError(message = 'Failed to load content') {
+    const sections = [popularMoviesSection, trendingMoviesSection, 
+                     topRatedMoviesSection, upcomingMoviesSection];
+    sections.forEach(section => {
+        if (section) {
+            section.innerHTML = `<p class="error">${message}</p>`;
+        }
+    });
 }
 
 // Show movie modal with details
