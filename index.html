@@ -3,189 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RedFlix - Movie Streaming</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <title>REDFLIX - Streaming Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Navbar -->
-    <div class="navbar">
-        <div class="navbar-left">
-            <div class="logo">REDFLIX</div>
-            <ul class="nav-links">
-                <li><a href="#" class="active">Home</a></li>
-                <li><a href="#">TV Shows</a></li>
-                <li><a href="#">Movies</a></li>
-                <li><a href="#">New & Popular</a></li>
-                <li><a href="#" id="my-list-link">My List</a></li>
-            </ul>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="logo">REDFLIX</div>
+        <ul class="nav-links">
+            <li><a href="#" class="active">Home</a></li>
+            <li><a href="#">TV Shows</a></li>
+            <li><a href="#">Movies</a></li>
+            <li><a href="#">New & Popular</a></li>
+            <li><a href="#">My List</a></li>
+        </ul>
+        <div class="auth-buttons">
+            <button id="loginBtn">Login</button>
+            <button id="registerBtn">Register</button>
         </div>
-        <div class="navbar-right">
-            <i class="fas fa-search" id="search-btn"></i>
-            <i class="fas fa-bell"></i>
-            <div class="profile" id="profile-icon"></div>
-        </div>
-    </div>
+    </nav>
 
-    <!-- Hero Section -->
-    <div class="hero" id="hero">
+    <!-- Hero Banner -->
+    <section class="hero" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('assets/hero-bg.jpg');">
         <div class="hero-content">
-            <h1 id="hero-title">Loading...</h1>
-            <p id="hero-overview" class="hero-overview"></p>
+            <h1>CLEANER</h1>
+            <p>SPEAKS SHACKS • CARTERN AMERICA • PURCH NEW YORK • SnowWinter</p>
             <div class="hero-buttons">
                 <button class="play-btn"><i class="fas fa-play"></i> Play</button>
                 <button class="info-btn"><i class="fas fa-info-circle"></i> More Info</button>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Movie Sections -->
-    <div class="movie-sections">
-        <h2 class="section-title">Popular on RedFlix</h2>
-        <div class="movie-row" id="popular-movies"></div>
-
-        <h2 class="section-title">Trending Now</h2>
-        <div class="movie-row" id="trending-movies"></div>
-
-        <h2 class="section-title">Top Rated</h2>
-        <div class="movie-row" id="top-rated-movies"></div>
-
-        <h2 class="section-title">Upcoming</h2>
-        <div class="movie-row" id="upcoming-movies"></div>
-
-        <h2 class="section-title">My List</h2>
-        <div class="movie-row" id="my-list-movies"></div>
-    </div>
-
-    <!-- Auth Modal -->
-    <div class="auth-modal" id="auth-modal">
-        <div class="auth-container">
-            <button class="close-auth" id="close-auth">&times;</button>
-            <div class="auth-tabs">
-                <button class="auth-tab active" id="login-tab">Login</button>
-                <button class="auth-tab" id="register-tab">Register</button>
+    <!-- Movie Carousels -->
+    <section class="carousel-section">
+        <h2>Trending Now</h2>
+        <div class="carousel-container">
+            <button class="carousel-btn prev-btn"><i class="fas fa-chevron-left"></i></button>
+            <div class="movie-carousel" id="trendingCarousel">
+                <!-- Movies loaded by JavaScript -->
             </div>
-            <div class="auth-content" id="login-content">
-                <input type="email" id="login-email" placeholder="Email">
-                <input type="password" id="login-password" placeholder="Password">
-                <button id="login-btn">Login</button>
-                <button id="google-login-btn"><i class="fab fa-google"></i> Login with Google</button>
-                <p class="auth-error" id="login-error"></p>
-            </div>
-            <div class="auth-content" id="register-content" style="display:none;">
-                <input type="text" id="register-name" placeholder="Name">
-                <input type="email" id="register-email" placeholder="Email">
-                <input type="password" id="register-password" placeholder="Password">
-                <button id="register-btn">Register</button>
-                <p class="auth-error" id="register-error"></p>
-            </div>
+            <button class="carousel-btn next-btn"><i class="fas fa-chevron-right"></i></button>
         </div>
-    </div>
+    </section>
 
-    <!-- Profile Dropdown -->
-    <div class="profile-dropdown" id="profile-dropdown">
-        <div class="profile-info">
-            <img id="profile-pic" src="assets/images/default-profile.png" alt="Profile">
-            <span id="profile-name">Guest</span>
-        </div>
-        <ul>
-            <li><a href="#" id="view-profile">Profile</a></li>
-            <li><a href="#" id="logout-btn">Logout</a></li>
-            <li><a href="#" id="toggle-theme">Dark Mode</a></li>
-        </ul>
-    </div>
-
-    <!-- Profile Modal -->
-    <div class="profile-modal" id="profile-modal">
-        <div class="profile-container">
-            <button class="close-profile" id="close-profile">&times;</button>
-            <h2>User Profile</h2>
-            <div class="profile-form">
-                <div class="profile-pic-container">
-                    <img id="profile-modal-pic" src="assets/images/default-profile.png" alt="Profile">
-                    <input type="file" id="profile-upload" accept="image/*">
-                </div>
-                <input type="text" id="profile-modal-name" placeholder="Name">
-                <input type="email" id="profile-modal-email" placeholder="Email" disabled>
-                <button id="save-profile-btn">Save Changes</button>
+    <section class="carousel-section">
+        <h2>Popular on REDFLIX</h2>
+        <div class="carousel-container">
+            <button class="carousel-btn prev-btn"><i class="fas fa-chevron-left"></i></button>
+            <div class="movie-carousel" id="popularCarousel">
+                <!-- Movies loaded by JavaScript -->
             </div>
-            <div class="user-stats">
-                <h3>Your Activity</h3>
-                <p>Movies Watched: <span id="movies-watched">0</span></p>
-                <p>Movies in List: <span id="movies-in-list">0</span></p>
+            <button class="carousel-btn next-btn"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </section>
+
+    <!-- Auth Modals -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div id="loginForm" class="auth-form">
+                <h2>Login</h2>
+                <input type="email" id="loginEmail" placeholder="Email" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <button id="submitLogin">Login</button>
+                <button id="googleLoginBtn" class="google-btn">
+                    <i class="fab fa-google"></i> Sign in with Google
+                </button>
+                <p class="auth-toggle">Don't have an account? <a href="#" id="showRegister">Register</a></p>
+                <p class="error-message" id="loginError"></p>
+            </div>
+            <div id="registerForm" class="auth-form" style="display: none;">
+                <h2>Register</h2>
+                <input type="text" id="registerName" placeholder="Name" required>
+                <input type="email" id="registerEmail" placeholder="Email" required>
+                <input type="password" id="registerPassword" placeholder="Password" required>
+                <button id="submitRegister">Register</button>
+                <p class="auth-toggle">Already have an account? <a href="#" id="showLogin">Login</a></p>
+                <p class="error-message" id="registerError"></p>
             </div>
         </div>
     </div>
 
     <!-- Video Player Modal -->
-    <div class="video-modal" id="video-modal">
-        <div class="video-container">
-            <button class="close-video" id="close-video">&times;</button>
-            <div class="video-wrapper">
-                <video id="movie-player" controls>
-                    <source src="" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+    <div id="videoModal" class="modal">
+        <div class="video-modal-content">
+            <span class="close-btn">&times;</span>
+            <div class="movie-info">
+                <h2 id="movieTitle"></h2>
+                <p id="movieMeta"></p>
+                <p id="movieDesc"></p>
+                <button id="favoriteBtn" class="favorite-btn">
+                    <i class="far fa-heart"></i> Add to Favorites
+                </button>
             </div>
-            <div class="video-info">
-                <h2 id="video-title">Movie Title</h2>
-                <p id="video-description">Movie description will appear here.</p>
-            </div>
+            <video id="moviePlayer" controls autoplay>
+                <source src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
         </div>
     </div>
 
-    <!-- Developer Section -->
-    <footer class="developer-section">
-        <div class="developer-container">
-            <h3>Developed by Md. Labib Hasan</h3>
-            <p class="developer-bio">
-                Computer Science and Engineering student at Daffodil International University. 
-                Passionate about technology, always eager to discover new things in the world 
-                of computer science and software development.
-            </p>
-            <div class="developer-links">
-                <a href="mailto:labibhasan754@gmail.com" target="_blank"><i class="fas fa-envelope"></i></a>
-                <a href="https://www.linkedin.com/in/labib-hasan-b07889274" target="_blank"><i class="fab fa-linkedin"></i></a>
-                <a href="https://github.com/labibhasan173" target="_blank"><i class="fab fa-github"></i></a>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Loading Spinner -->
-    <div class="loading-spinner" id="loading-spinner">
-        <div class="spinner"></div>
-    </div>
-
-    <!-- Add to your sections -->
-<h2 class="section-title">TV Shows</h2>
-<div class="movie-row" id="tv-shows"></div>
-
-<!-- Search Modal -->
-<div class="search-modal" id="search-modal">
-    <div class="search-container">
-        <input type="text" id="search-input" placeholder="Search movies and TV shows...">
-        <div class="search-results" id="search-results"></div>
-        <button class="close-search" id="close-search">×</button>
-    </div>
-</div>
-
-<!-- Search Modal -->
-<div class="search-modal" id="search-modal">
-    <div class="search-container">
-      <input type="text" id="search-input" placeholder="Search movies..." autocomplete="off">
-      <div class="search-results" id="search-results"></div>
-      <button class="close-search" id="close-search">&times;</button>
-    </div>
-  </div>
-
-    <!-- Scripts -->
-    <script src="firebase-config.js"></script>
-    <script src="auth.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="script.js"></script>
+    <script src="auth.js"></script>
+    <script src="movies.js"></script>
 </body>
 </html>
