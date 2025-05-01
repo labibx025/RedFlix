@@ -18,16 +18,13 @@ const searchModal = document.getElementById('search-modal');
 const searchInput = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
 const closeSearch = document.getElementById('close-search');
-const movieModal = document.getElementById('movie-modal');
-const modalBody = document.getElementById('modal-body');
-const closeModal = document.getElementById('close-modal');
-const themeToggle = document.getElementById('toggle-theme');
-const myListLink = document.getElementById('my-list-link');
 const videoModal = document.getElementById('video-modal');
 const videoPlayer = document.getElementById('movie-player');
 const videoTitle = document.getElementById('video-title');
 const videoDescription = document.getElementById('video-description');
 const closeVideo = document.getElementById('close-video');
+const startPlaybackBtn = document.getElementById('start-playback');
+const videoError = document.querySelector('.video-error');
 const loadingSpinner = document.getElementById('loading-spinner');
 
 // State
@@ -68,9 +65,6 @@ async function init() {
             const randomMovie = popularMovies[Math.floor(Math.random() * popularMovies.length)];
             showMovieDetails(randomMovie);
         }
-        
-        // Load saved theme
-        loadTheme();
         
         // Setup event listeners
         setupEventListeners();
@@ -117,18 +111,57 @@ function displayMovies(movies, element) {
     try {
         element.innerHTML = movies.map(movie => `
             <div class="movie-card" data-movie-id="${movie.id}">
-                <img src="${IMG_BASE_URL}${movie.poster_path}" 
+                <img src="${movie.poster_path ? IMG_BASE_URL + movie.poster_path : 'https://via.placeholder.com/300x450?text=Poster+Not+Available'}" 
                      onerror="this.src='https://via.placeholder.com/300x450?text=Poster+Not+Available'"
                      alt="${movie.title}">
                 <div class="movie-info">
                     <h3>${movie.title}</h3>
                     <p>${movie.release_date?.substring(0, 4) || ''}</p>
                 </div>
+                <div class="play-overlay">
+                    <i class="fas fa-play"></i>
+                </div>
             </div>
         `).join('');
+
+        // Add click event to movie cards
+        document.querySelectorAll('.movie-card').forEach(card => {
+            card.addEventListener('click', async (e) => {
+                // Don't trigger if clicking on play button
+                if (e.target.closest('.play-overlay')) return;
+                
+                const movieId = card.dataset.movieId;
+                await handleMovieSelection(movieId);
+            });
+        });
+
+        // Add play button functionality
+        document.querySelectorAll('.play-overlay').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const card = e.target.closest('.movie-card');
+                const movieId = card.dataset.movieId;
+                await handleMovieSelection(movieId);
+            });
+        });
     } catch (error) {
         console.error('Error displaying movies:', error);
         element.innerHTML = '<p class="error">Error displaying movies</p>';
+    }
+}
+
+async function handleMovieSelection(movieId) {
+    showLoading();
+    try {
+        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}`);
+        if (!response.ok) throw new Error('Failed to fetch movie');
+        const movie = await response.json();
+        playMovie(movie);
+    } catch (error) {
+        console.error('Error loading movie:', error);
+        alert('Failed to load movie details. Please try again.');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -149,120 +182,191 @@ function showMovieDetails(movie) {
     infoBtn.onclick = () => showMovieModal(movie);
 }
 
-// Play movie (sample implementation)
+// Play movie with improved error handling
 function playMovie(movie) {
+    console.log('Attempting to play movie:', movie.title);
     currentVideo = movie;
     videoTitle.textContent = movie.title;
     videoDescription.textContent = movie.overview || 'No description available';
+    startPlaybackBtn.style.display = 'none';
+    videoError.style.display = 'none';
+    videoPlayer.controls = true;
+
+    // Reset the video player
+    videoPlayer.pause();
+    videoPlayer.src = '';
+    videoPlayer.load();
+
+    // Try local files first
+    if (window.movies && window.movies.length > 0) {
+        const localMovie = window.movies.find(m => m.title === movie.title);
+        if (localMovie && localMovie.videoUrl) {
+            console.log('Found local movie file:', localMovie.videoUrl);
+            videoPlayer.src = localMovie.videoUrl;
+            
+            videoPlayer.oncanplay = () => {
+                console.log('Local video can play');
+                attemptPlayback();
+            };
+            
+            videoPlayer.onerror = () => {
+                console.error('Error loading local video');
+                showVideoError('Error loading video file. Trying fallback...');
+                tryFallbackVideo(movie);
+            };
+            
+            return;
+        }
+    }
     
-    // In a real app, you would fetch the actual video URL
-    videoPlayer.src = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-    
+    // If no local file, try YouTube trailer
+    tryFallbackVideo(movie);
+}
+
+function tryFallbackVideo(movie) {
+    console.log('Trying fallback video for:', movie.title);
+    fetch(`${BASE_URL}/movie/${movie.id}/videos?api_key=${API_KEY}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Trailer API failed');
+            return res.json();
+        })
+        .then(data => {
+            const trailer = data.results.find(v => v.type === "Trailer" && v.site === "YouTube");
+            if (trailer) {
+                console.log('Found YouTube trailer:', trailer.key);
+                videoPlayer.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&enablejsapi=1`;
+                attemptPlayback();
+            } else {
+                throw new Error('No trailer found');
+            }
+        })
+        .catch(error => {
+            console.error('Error getting trailer:', error);
+            // Final fallback to sample video
+            videoPlayer.src = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+            attemptPlayback();
+        });
+}
+
+function attemptPlayback() {
+    console.log('Attempting playback');
     videoModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     
-    // Play the video
-    setTimeout(() => {
-        videoPlayer.play().catch(e => console.log('Autoplay prevented:', e));
-    }, 300);
+    const playPromise = videoPlayer.play();
+    
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            console.log('Playback started successfully');
+            startPlaybackBtn.style.display = 'none';
+        })
+        .catch(error => {
+            console.log('Autoplay blocked, showing manual play button');
+            startPlaybackBtn.style.display = 'block';
+            startPlaybackBtn.onclick = () => {
+                videoPlayer.play()
+                    .then(() => startPlaybackBtn.style.display = 'none')
+                    .catch(e => {
+                        console.error('Manual play failed:', e);
+                        showVideoError('Failed to play video. Please try another movie.');
+                    });
+            };
+        });
+    }
 }
 
-// Show movie modal with details
-async function showMovieModal(movie) {
-    showLoading();
+function showVideoError(message) {
+    videoError.textContent = message;
+    videoError.style.display = 'block';
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Video player close button
+    closeVideo.addEventListener('click', closeVideoModal);
+    
+    // Search functionality
+    searchBtn.addEventListener('click', openSearchModal);
+    closeSearch.addEventListener('click', closeSearchModal);
+    searchInput.addEventListener('input', handleSearchInput);
+    
+    // Video player events
+    videoPlayer.addEventListener('ended', () => {
+        if (currentVideo && auth.currentUser) {
+            db.collection('users').doc(auth.currentUser.uid).update({
+                moviesWatched: firebase.firestore.FieldValue.increment(1)
+            });
+        }
+    });
+    
+    videoPlayer.addEventListener('error', (e) => {
+        console.error('Video error:', videoPlayer.error);
+        showVideoError('Error playing video. Please try another movie.');
+    });
+    
+    // Close modals when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === videoModal) closeVideoModal();
+        if (e.target === searchModal) closeSearchModal();
+    });
+}
+
+// Search functionality
+async function handleSearchInput(e) {
+    const query = e.target.value.trim();
+    if (query.length < 2) {
+        searchResults.innerHTML = '';
+        return;
+    }
     
     try {
-        // Fetch additional movie details
-        const [movieDetails, credits] = await Promise.all([
-            fetchMovieDetails(movie.id),
-            fetchMovieCredits(movie.id)
-        ]);
-        
-        // Create modal content
-        modalBody.innerHTML = `
-            <div class="modal-top" style="background-image: url(${IMG_BASE_URL}${movie.backdrop_path || movie.poster_path})"></div>
-            <div class="modal-info">
-                <h2 class="modal-title">${movie.title}</h2>
-                <div class="modal-meta">
-                    <span class="modal-rating">${Math.round(movie.vote_average * 10)}% Match</span>
-                    <span>${movie.release_date ? movie.release_date.substring(0, 4) : ''}</span>
-                    ${movieDetails.runtime ? `<span>${Math.floor(movieDetails.runtime / 60)}h ${movieDetails.runtime % 60}m</span>` : ''}
-                </div>
-                <div class="modal-genres">
-                    ${movieDetails.genres?.map(genre => `<span class="modal-genre">${genre.name}</span>`).join('') || ''}
-                </div>
-                <p class="modal-overview">${movie.overview || 'No overview available.'}</p>
-                <div class="modal-buttons">
-                    <button class="modal-play-btn"><i class="fas fa-play"></i> Play</button>
-                    <button class="modal-add-btn" data-movie-id="${movie.id}">
-                        <i class="fas ${isInMyList(movie.id) ? 'fa-check' : 'fa-plus'}"></i> My List
-                    </button>
-                </div>
-                ${credits.cast?.length > 0 ? `
-                <div class="modal-cast">
-                    <h3>Cast</h3>
-                    <div class="cast-list">
-                        ${credits.cast.slice(0, 10).map(actor => `
-                            <div class="cast-item">
-                                <img src="${actor.profile_path ? IMG_BASE_URL + actor.profile_path : 'https://via.placeholder.com/150'}" alt="${actor.name}">
-                                <h4>${actor.name}</h4>
-                                <p>${actor.character}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
+        const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        displaySearchResults(data.results);
+    } catch (error) {
+        console.error('Search error:', error);
+        searchResults.innerHTML = '<p class="error">Failed to load search results</p>';
+    }
+}
+
+function displaySearchResults(results) {
+    if (!results || results.length === 0) {
+        searchResults.innerHTML = '<p>No results found</p>';
+        return;
+    }
+    
+    searchResults.innerHTML = results.map(movie => `
+        <div class="search-result" data-movie-id="${movie.id}">
+            <img src="${movie.poster_path ? IMG_BASE_URL + movie.poster_path : 'https://via.placeholder.com/150x225?text=No+Poster'}" 
+                 alt="${movie.title}">
+            <div class="search-result-info">
+                <h3>${movie.title}</h3>
+                <p>${movie.release_date ? movie.release_date.substring(0, 4) : ''}</p>
             </div>
-        `;
-        
-        // Add event listeners to modal buttons
-        const playBtn = modalBody.querySelector('.modal-play-btn');
-        const addToListBtn = modalBody.querySelector('.modal-add-btn');
-        
-        playBtn.addEventListener('click', () => {
-            closeMovieModal();
-            playMovie(movie);
+        </div>
+    `).join('');
+    
+    // Add click handlers to search results
+    document.querySelectorAll('.search-result').forEach(result => {
+        result.addEventListener('click', async () => {
+            const movieId = result.dataset.movieId;
+            await handleMovieSelection(movieId);
+            closeSearchModal();
         });
-        
-        addToListBtn.addEventListener('click', () => toggleMyList(movie));
-        
-        // Show modal
-        movieModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    } catch (error) {
-        console.error('Error showing movie modal:', error);
-        modalBody.innerHTML = '<p class="error">Failed to load movie details. Please try again.</p>';
-    } finally {
-        hideLoading();
-    }
+    });
 }
 
-// Fetch additional movie details
-async function fetchMovieDetails(movieId) {
-    try {
-        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching movie details:', error);
-        throw error;
-    }
+function openSearchModal() {
+    searchModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    searchInput.focus();
 }
 
-// Fetch movie credits (cast)
-async function fetchMovieCredits(movieId) {
-    try {
-        const response = await fetch(`${BASE_URL}/movie/${movieId}/credits?api_key=${API_KEY}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching movie credits:', error);
-        return { cast: [] };
-    }
+function closeSearchModal() {
+    searchModal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    searchInput.value = '';
+    searchResults.innerHTML = '';
 }
 
 // My List functionality
@@ -278,12 +382,6 @@ function toggleMyList(movie) {
     // Update localStorage
     localStorage.setItem('myList', JSON.stringify(myList));
     
-    // Update button in modal
-    const addBtn = document.querySelector(`.modal-add-btn[data-movie-id="${movie.id}"]`);
-    if (addBtn) {
-        addBtn.innerHTML = `<i class="fas ${isInMyList(movie.id) ? 'fa-check' : 'fa-plus'}"></i> My List`;
-    }
-    
     // Update user's movie count in Firestore if logged in
     if (auth.currentUser) {
         db.collection('users').doc(auth.currentUser.uid).update({
@@ -293,10 +391,6 @@ function toggleMyList(movie) {
     
     // Reload My List section
     loadMyList();
-}
-
-function isInMyList(movieId) {
-    return myList.some(movie => movie.id === movieId);
 }
 
 function loadMyList() {
@@ -310,58 +404,7 @@ function loadMyList() {
     displayMovies(myList, myListMoviesSection);
 }
 
-// Theme functionality
-function loadTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-mode');
-        themeToggle.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
-    }
-}
-
-function toggleTheme() {
-    if (document.body.classList.toggle('light-mode')) {
-        localStorage.setItem('theme', 'light');
-        themeToggle.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
-    } else {
-        localStorage.setItem('theme', 'dark');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
-    }
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // Theme toggle
-    themeToggle.addEventListener('click', toggleTheme);
-    
-    // My List link
-    myListLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        myListMoviesSection.scrollIntoView({ behavior: 'smooth' });
-    });
-    
-    // Video player events
-    videoPlayer.addEventListener('ended', () => {
-        if (currentVideo && auth.currentUser) {
-            db.collection('users').doc(auth.currentUser.uid).update({
-                moviesWatched: firebase.firestore.FieldValue.increment(1)
-            });
-        }
-    });
-    
-    // Close modals when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === movieModal) closeMovieModal();
-        if (e.target === videoModal) closeVideoModal();
-    });
-}
-
 // Modal functions
-function closeMovieModal() {
-    movieModal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-}
-
 function closeVideoModal() {
     videoPlayer.pause();
     videoModal.style.display = 'none';

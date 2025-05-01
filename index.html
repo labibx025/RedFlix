@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RedFlix - Movie Streaming</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
@@ -62,6 +62,15 @@
         <div class="movie-row" id="my-list-movies"></div>
     </div>
 
+    <!-- Search Modal -->
+    <div class="search-modal" id="search-modal">
+        <div class="search-container">
+            <button class="close-search" id="close-search">&times;</button>
+            <input type="text" id="search-input" placeholder="Search for movies...">
+            <div id="search-results"></div>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div class="auth-modal" id="auth-modal">
         <div class="auth-container">
@@ -100,41 +109,22 @@
         </ul>
     </div>
 
-    <!-- Profile Modal -->
-    <div class="profile-modal" id="profile-modal">
-        <div class="profile-container">
-            <button class="close-profile" id="close-profile">&times;</button>
-            <h2>User Profile</h2>
-            <div class="profile-form">
-                <div class="profile-pic-container">
-                    <img id="profile-modal-pic" src="assets/images/default-profile.png" alt="Profile">
-                    <input type="file" id="profile-upload" accept="image/*">
-                </div>
-                <input type="text" id="profile-modal-name" placeholder="Name">
-                <input type="email" id="profile-modal-email" placeholder="Email" disabled>
-                <button id="save-profile-btn">Save Changes</button>
-            </div>
-            <div class="user-stats">
-                <h3>Your Activity</h3>
-                <p>Movies Watched: <span id="movies-watched">0</span></p>
-                <p>Movies in List: <span id="movies-in-list">0</span></p>
-            </div>
-        </div>
-    </div>
-
     <!-- Video Player Modal -->
     <div class="video-modal" id="video-modal">
         <div class="video-container">
             <button class="close-video" id="close-video">&times;</button>
             <div class="video-wrapper">
                 <video id="movie-player" controls>
-                    <source src="" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
             </div>
             <div class="video-info">
                 <h2 id="video-title">Movie Title</h2>
                 <p id="video-description">Movie description will appear here.</p>
+                <button id="start-playback" style="display: none;">
+                    <i class="fas fa-play"></i> Click to Play
+                </button>
+                <p class="video-error" style="display: none; color: #E50914;"></p>
             </div>
         </div>
     </div>
@@ -163,6 +153,7 @@
 
     <!-- Scripts -->
     <script src="firebase-config.js"></script>
+    <script src="movies.js"></script>
     <script src="auth.js"></script>
     <script src="script.js"></script>
 </body>
