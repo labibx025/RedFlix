@@ -31,6 +31,8 @@ const moviesWatched = document.getElementById('movies-watched');
 const moviesInList = document.getElementById('movies-in-list');
 const profileIcon = document.getElementById('profile-icon');
 
+let currentUser = null;
+
 // Auth State Listener
 auth.onAuthStateChanged((user) => {
     if (user) {

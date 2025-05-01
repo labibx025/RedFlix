@@ -18,48 +18,92 @@
         <div class="navbar-left">
             <div class="logo">REDFLIX</div>
             <ul class="nav-links">
-                <li><a href="#" class="active">Home</a></li>
-                <li><a href="#">TV Shows</a></li>
-                <li><a href="#">Movies</a></li>
-                <li><a href="#">New & Popular</a></li>
-                <li><a href="#" id="my-list-link">My List</a></li>
+                <li><a href="#" class="nav-link active" data-section="home">Home</a></li>
+                <li><a href="#" class="nav-link" data-section="tv-shows">TV Shows</a></li>
+                <li><a href="#" class="nav-link" data-section="movies">Movies</a></li>
+                <li><a href="#" class="nav-link" data-section="new-popular">New & Popular</a></li>
+                <li><a href="#" class="nav-link" data-section="my-list">My List</a></li>
             </ul>
         </div>
         <div class="navbar-right">
             <i class="fas fa-search" id="search-btn"></i>
-            <i class="fas fa-bell"></i>
+            <i class="fas fa-bell" id="notification-btn"></i>
             <div class="profile" id="profile-icon"></div>
         </div>
     </div>
 
-    <!-- Hero Section -->
-    <div class="hero" id="hero">
-        <div class="hero-content">
-            <h1 id="hero-title">Loading...</h1>
-            <p id="hero-overview" class="hero-overview"></p>
-            <div class="hero-buttons">
-                <button class="play-btn"><i class="fas fa-play"></i> Play</button>
-                <button class="info-btn"><i class="fas fa-info-circle"></i> More Info</button>
+    <!-- Main Content Sections -->
+    <div class="content-section active" id="home-section">
+        <!-- Hero Section -->
+        <div class="hero" id="hero">
+            <div class="hero-content">
+                <h1 id="hero-title">Loading...</h1>
+                <p id="hero-overview" class="hero-overview"></p>
+                <div class="hero-buttons">
+                    <button class="play-btn"><i class="fas fa-play"></i> Play</button>
+                    <button class="info-btn"><i class="fas fa-info-circle"></i> More Info</button>
+                    <button class="add-to-list-btn"><i class="fas fa-plus"></i> My List</button>
+                </div>
             </div>
+        </div>
+
+        <!-- Movie Sections -->
+        <div class="movie-sections">
+            <h2 class="section-title">Popular on RedFlix</h2>
+            <div class="movie-row" id="popular-movies"></div>
+
+            <h2 class="section-title">Trending Now</h2>
+            <div class="movie-row" id="trending-movies"></div>
+
+            <h2 class="section-title">Top Rated</h2>
+            <div class="movie-row" id="top-rated-movies"></div>
+
+            <h2 class="section-title">Upcoming</h2>
+            <div class="movie-row" id="upcoming-movies"></div>
         </div>
     </div>
 
-    <!-- Movie Sections -->
-    <div class="movie-sections">
-        <h2 class="section-title">Popular on RedFlix</h2>
-        <div class="movie-row" id="popular-movies"></div>
+    <!-- My List Section -->
+    <div class="content-section" id="my-list-section">
+        <div class="section-header">
+            <h1>My List</h1>
+        </div>
+        <div class="movie-sections">
+            <div class="movie-row" id="my-list-movies"></div>
+        </div>
+    </div>
 
-        <h2 class="section-title">Trending Now</h2>
-        <div class="movie-row" id="trending-movies"></div>
+    <!-- TV Shows Section -->
+    <div class="content-section" id="tv-shows-section">
+        <div class="section-header">
+            <h1>TV Shows</h1>
+        </div>
+        <div class="movie-sections">
+            <h2 class="section-title">Popular TV Shows</h2>
+            <div class="movie-row" id="popular-tv"></div>
+        </div>
+    </div>
 
-        <h2 class="section-title">Top Rated</h2>
-        <div class="movie-row" id="top-rated-movies"></div>
+    <!-- Movies Section -->
+    <div class="content-section" id="movies-section">
+        <div class="section-header">
+            <h1>Movies</h1>
+        </div>
+        <div class="movie-sections">
+            <h2 class="section-title">All Movies</h2>
+            <div class="movie-row" id="all-movies"></div>
+        </div>
+    </div>
 
-        <h2 class="section-title">Upcoming</h2>
-        <div class="movie-row" id="upcoming-movies"></div>
-
-        <h2 class="section-title">My List</h2>
-        <div class="movie-row" id="my-list-movies"></div>
+    <!-- New & Popular Section -->
+    <div class="content-section" id="new-popular-section">
+        <div class="section-header">
+            <h1>New & Popular</h1>
+        </div>
+        <div class="movie-sections">
+            <h2 class="section-title">Recently Added</h2>
+            <div class="movie-row" id="recent-movies"></div>
+        </div>
     </div>
 
     <!-- Search Modal -->
@@ -114,17 +158,27 @@
         <div class="video-container">
             <button class="close-video" id="close-video">&times;</button>
             <div class="video-wrapper">
-                <video id="movie-player" controls>
-                    Your browser does not support the video tag.
-                </video>
+                <iframe id="movie-player" frameborder="0" allowfullscreen></iframe>
             </div>
             <div class="video-info">
                 <h2 id="video-title">Movie Title</h2>
                 <p id="video-description">Movie description will appear here.</p>
-                <button id="start-playback" style="display: none;">
-                    <i class="fas fa-play"></i> Click to Play
-                </button>
-                <p class="video-error" style="display: none; color: #E50914;"></p>
+                <div class="video-actions">
+                    <button id="play-btn"><i class="fas fa-play"></i> Play</button>
+                    <button id="add-to-list-btn"><i class="fas fa-plus"></i> My List</button>
+                </div>
+                <p class="video-error" id="video-error" style="display: none;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div class="notification-modal" id="notification-modal">
+        <div class="notification-container">
+            <button class="close-notification" id="close-notification">&times;</button>
+            <h3>Notifications</h3>
+            <div id="notification-list">
+                <p>No new notifications</p>
             </div>
         </div>
     </div>
@@ -132,16 +186,21 @@
     <!-- Developer Section -->
     <footer class="developer-section">
         <div class="developer-container">
-            <h3>Developed by Md. Labib Hasan</h3>
-            <p class="developer-bio">
-                Computer Science and Engineering student at Daffodil International University. 
-                Passionate about technology, always eager to discover new things in the world 
-                of computer science and software development.
-            </p>
+            <div class="developer-info">
+                <img src="https://via.placeholder.com/150" alt="Developer" class="developer-img">
+                <div>
+                    <h3>Developed by Md. Labib Hasan</h3>
+                    <p class="developer-bio">
+                        Computer Science and Engineering student at Daffodil International University. 
+                        Passionate about technology, always eager to discover new things in the world 
+                        of computer science and software development.
+                    </p>
+                </div>
+            </div>
             <div class="developer-links">
-                <a href="mailto:labibhasan754@gmail.com" target="_blank"><i class="fas fa-envelope"></i></a>
-                <a href="https://www.linkedin.com/in/labib-hasan-b07889274" target="_blank"><i class="fab fa-linkedin"></i></a>
-                <a href="https://github.com/labibhasan173" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="mailto:labibhasan754@gmail.com" target="_blank"><i class="fas fa-envelope"></i> Email</a>
+                <a href="https://www.linkedin.com/in/labib-hasan-b07889274" target="_blank"><i class="fab fa-linkedin"></i> LinkedIn</a>
+                <a href="https://github.com/labibhasan173" target="_blank"><i class="fab fa-github"></i> GitHub</a>
             </div>
         </div>
     </footer>
@@ -153,8 +212,8 @@
 
     <!-- Scripts -->
     <script src="firebase-config.js"></script>
-    <script src="movies.js"></script>
     <script src="auth.js"></script>
+    <script src="movies.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

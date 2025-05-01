@@ -23,19 +23,30 @@ const videoPlayer = document.getElementById('movie-player');
 const videoTitle = document.getElementById('video-title');
 const videoDescription = document.getElementById('video-description');
 const closeVideo = document.getElementById('close-video');
-const startPlaybackBtn = document.getElementById('start-playback');
-const videoError = document.querySelector('.video-error');
+const playBtn = document.getElementById('play-btn');
+const addToListBtn = document.getElementById('add-to-list-btn');
+const videoError = document.getElementById('video-error');
 const loadingSpinner = document.getElementById('loading-spinner');
+const notificationBtn = document.getElementById('notification-btn');
+const notificationModal = document.getElementById('notification-modal');
+const closeNotification = document.getElementById('close-notification');
+const notificationList = document.getElementById('notification-list');
+const navLinks = document.querySelectorAll('.nav-link');
+const contentSections = document.querySelectorAll('.content-section');
 
 // State
 let myList = JSON.parse(localStorage.getItem('myList')) || [];
 let currentVideo = null;
+let currentHeroMovie = null;
 
 // Initialize the page
 async function init() {
     showLoading();
     
     try {
+        // Setup event listeners
+        setupEventListeners();
+        
         // Fetch different categories of movies
         const popularMovies = await fetchMovies(
             `${BASE_URL}/movie/popular?api_key=${API_KEY}`,
@@ -63,11 +74,14 @@ async function init() {
         // Set a random popular movie as the hero
         if (popularMovies && popularMovies.length > 0) {
             const randomMovie = popularMovies[Math.floor(Math.random() * popularMovies.length)];
+            currentHeroMovie = randomMovie;
             showMovieDetails(randomMovie);
         }
         
-        // Setup event listeners
-        setupEventListeners();
+        // Check if user is logged in
+        if (auth.currentUser) {
+            loadNotifications();
+        }
     } catch (error) {
         console.error('Initialization error:', error);
         popularMoviesSection.innerHTML = '<p class="error">Failed to load movies. Please try again later.</p>';
@@ -168,7 +182,7 @@ async function handleMovieSelection(movieId) {
 // Show movie details in hero section
 function showMovieDetails(movie) {
     if (movie.backdrop_path) {
-        heroSection.style.backgroundImage = `url(${IMG_BASE_URL}${movie.backdrop_path})`;
+        heroSection.style.backgroundImage = `linear-gradient(to right, rgba(20, 20, 20, 1) 0%, rgba(20, 20, 20, 0) 50%, rgba(20, 20, 20, 0) 100%), url(${IMG_BASE_URL}${movie.backdrop_path})`;
     } else {
         heroSection.style.backgroundImage = 'linear-gradient(to right, #141414, #333)';
     }
@@ -178,8 +192,19 @@ function showMovieDetails(movie) {
     // Update buttons
     const playBtn = document.querySelector('.play-btn');
     const infoBtn = document.querySelector('.info-btn');
+    const addToListBtn = document.querySelector('.add-to-list-btn');
+    
     playBtn.onclick = () => playMovie(movie);
     infoBtn.onclick = () => showMovieModal(movie);
+    
+    // Update add to list button
+    const isInList = myList.some(item => item.id === movie.id);
+    addToListBtn.innerHTML = isInList ? '<i class="fas fa-check"></i> In My List' : '<i class="fas fa-plus"></i> My List';
+    addToListBtn.onclick = () => {
+        toggleMyList(movie);
+        const isNowInList = myList.some(item => item.id === movie.id);
+        addToListBtn.innerHTML = isNowInList ? '<i class="fas fa-check"></i> In My List' : '<i class="fas fa-plus"></i> My List';
+    };
 }
 
 // Play movie with improved error handling
@@ -188,43 +213,36 @@ function playMovie(movie) {
     currentVideo = movie;
     videoTitle.textContent = movie.title;
     videoDescription.textContent = movie.overview || 'No description available';
-    startPlaybackBtn.style.display = 'none';
     videoError.style.display = 'none';
-    videoPlayer.controls = true;
-
-    // Reset the video player
-    videoPlayer.pause();
-    videoPlayer.src = '';
-    videoPlayer.load();
-
+    
+    // Update add to list button in video modal
+    const isInList = myList.some(item => item.id === movie.id);
+    addToListBtn.innerHTML = isInList ? '<i class="fas fa-check"></i> In My List' : '<i class="fas fa-plus"></i> My List';
+    addToListBtn.onclick = () => {
+        toggleMyList(movie);
+        const isNowInList = myList.some(item => item.id === movie.id);
+        addToListBtn.innerHTML = isNowInList ? '<i class="fas fa-check"></i> In My List' : '<i class="fas fa-plus"></i> My List';
+    };
+    
     // Try local files first
     if (window.movies && window.movies.length > 0) {
         const localMovie = window.movies.find(m => m.title === movie.title);
         if (localMovie && localMovie.videoUrl) {
             console.log('Found local movie file:', localMovie.videoUrl);
             videoPlayer.src = localMovie.videoUrl;
-            
-            videoPlayer.oncanplay = () => {
-                console.log('Local video can play');
-                attemptPlayback();
-            };
-            
-            videoPlayer.onerror = () => {
-                console.error('Error loading local video');
-                showVideoError('Error loading video file. Trying fallback...');
-                tryFallbackVideo(movie);
-            };
-            
+            playBtn.style.display = 'none';
+            videoModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
             return;
         }
     }
     
     // If no local file, try YouTube trailer
-    tryFallbackVideo(movie);
+    tryYouTubeTrailer(movie);
 }
 
-function tryFallbackVideo(movie) {
-    console.log('Trying fallback video for:', movie.title);
+function tryYouTubeTrailer(movie) {
+    console.log('Trying YouTube trailer for:', movie.title);
     fetch(`${BASE_URL}/movie/${movie.id}/videos?api_key=${API_KEY}`)
         .then(res => {
             if (!res.ok) throw new Error('Trailer API failed');
@@ -235,44 +253,23 @@ function tryFallbackVideo(movie) {
             if (trailer) {
                 console.log('Found YouTube trailer:', trailer.key);
                 videoPlayer.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&enablejsapi=1`;
-                attemptPlayback();
+                playBtn.style.display = 'none';
+                videoModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
             } else {
                 throw new Error('No trailer found');
             }
         })
         .catch(error => {
             console.error('Error getting trailer:', error);
-            // Final fallback to sample video
-            videoPlayer.src = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-            attemptPlayback();
-        });
-}
-
-function attemptPlayback() {
-    console.log('Attempting playback');
-    videoModal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    
-    const playPromise = videoPlayer.play();
-    
-    if (playPromise !== undefined) {
-        playPromise.then(() => {
-            console.log('Playback started successfully');
-            startPlaybackBtn.style.display = 'none';
-        })
-        .catch(error => {
-            console.log('Autoplay blocked, showing manual play button');
-            startPlaybackBtn.style.display = 'block';
-            startPlaybackBtn.onclick = () => {
-                videoPlayer.play()
-                    .then(() => startPlaybackBtn.style.display = 'none')
-                    .catch(e => {
-                        console.error('Manual play failed:', e);
-                        showVideoError('Failed to play video. Please try another movie.');
-                    });
+            showVideoError('No video available for this movie');
+            videoModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            playBtn.style.display = 'block';
+            playBtn.onclick = () => {
+                showVideoError('No playable video available');
             };
         });
-    }
 }
 
 function showVideoError(message) {
@@ -282,6 +279,28 @@ function showVideoError(message) {
 
 // Setup event listeners
 function setupEventListeners() {
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
+    });
+    
+    // Navigation tabs
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = link.dataset.section;
+            showSection(section);
+            
+            // Update active class
+            navLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+    
     // Video player close button
     closeVideo.addEventListener('click', closeVideoModal);
     
@@ -290,25 +309,161 @@ function setupEventListeners() {
     closeSearch.addEventListener('click', closeSearchModal);
     searchInput.addEventListener('input', handleSearchInput);
     
-    // Video player events
-    videoPlayer.addEventListener('ended', () => {
-        if (currentVideo && auth.currentUser) {
-            db.collection('users').doc(auth.currentUser.uid).update({
-                moviesWatched: firebase.firestore.FieldValue.increment(1)
-            });
-        }
-    });
-    
-    videoPlayer.addEventListener('error', (e) => {
-        console.error('Video error:', videoPlayer.error);
-        showVideoError('Error playing video. Please try another movie.');
-    });
+    // Notification functionality
+    notificationBtn.addEventListener('click', toggleNotificationModal);
+    closeNotification.addEventListener('click', closeNotificationModal);
     
     // Close modals when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === videoModal) closeVideoModal();
         if (e.target === searchModal) closeSearchModal();
+        if (e.target === notificationModal) closeNotificationModal();
     });
+}
+
+// Show specific content section
+function showSection(section) {
+    contentSections.forEach(sec => sec.classList.remove('active'));
+    
+    switch(section) {
+        case 'home':
+            document.getElementById('home-section').classList.add('active');
+            break;
+        case 'tv-shows':
+            document.getElementById('tv-shows-section').classList.add('active');
+            loadTVShows();
+            break;
+        case 'movies':
+            document.getElementById('movies-section').classList.add('active');
+            loadAllMovies();
+            break;
+        case 'new-popular':
+            document.getElementById('new-popular-section').classList.add('active');
+            loadRecentMovies();
+            break;
+        case 'my-list':
+            document.getElementById('my-list-section').classList.add('active');
+            loadMyList();
+            break;
+    }
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+// Load TV shows
+async function loadTVShows() {
+    showLoading();
+    try {
+        const response = await fetch(`${BASE_URL}/tv/popular?api_key=${API_KEY}`);
+        const data = await response.json();
+        displayTVShows(data.results, document.getElementById('popular-tv'));
+    } catch (error) {
+        console.error('Error loading TV shows:', error);
+        document.getElementById('popular-tv').innerHTML = '<p class="error">Failed to load TV shows</p>';
+    } finally {
+        hideLoading();
+    }
+}
+
+function displayTVShows(tvShows, element) {
+    element.innerHTML = tvShows.map(show => `
+        <div class="movie-card" data-tv-id="${show.id}">
+            <img src="${show.poster_path ? IMG_BASE_URL + show.poster_path : 'https://via.placeholder.com/300x450?text=Poster+Not+Available'}" 
+                 onerror="this.src='https://via.placeholder.com/300x450?text=Poster+Not+Available'"
+                 alt="${show.name}">
+            <div class="movie-info">
+                <h3>${show.name}</h3>
+                <p>${show.first_air_date?.substring(0, 4) || ''}</p>
+            </div>
+            <div class="play-overlay">
+                <i class="fas fa-play"></i>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add click handlers
+    document.querySelectorAll('[data-tv-id]').forEach(card => {
+        card.addEventListener('click', async () => {
+            const tvId = card.dataset.tvId;
+            await handleTVSelection(tvId);
+        });
+    });
+}
+
+async function handleTVSelection(tvId) {
+    showLoading();
+    try {
+        const response = await fetch(`${BASE_URL}/tv/${tvId}?api_key=${API_KEY}`);
+        const tvShow = await response.json();
+        playTVShow(tvShow);
+    } catch (error) {
+        console.error('Error loading TV show:', error);
+        alert('Failed to load TV show details');
+    } finally {
+        hideLoading();
+    }
+}
+
+function playTVShow(tvShow) {
+    currentVideo = tvShow;
+    videoTitle.textContent = tvShow.name;
+    videoDescription.textContent = tvShow.overview || 'No description available';
+    
+    // Try YouTube trailer
+    fetch(`${BASE_URL}/tv/${tvShow.id}/videos?api_key=${API_KEY}`)
+        .then(res => res.json())
+        .then(data => {
+            const trailer = data.results.find(v => v.type === "Trailer" && v.site === "YouTube");
+            if (trailer) {
+                videoPlayer.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&enablejsapi=1`;
+                playBtn.style.display = 'none';
+                videoModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } else {
+                throw new Error('No trailer found');
+            }
+        })
+        .catch(error => {
+            console.error('Error getting trailer:', error);
+            showVideoError('No video available for this TV show');
+            videoModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            playBtn.style.display = 'block';
+            playBtn.onclick = () => {
+                showVideoError('No playable video available');
+            };
+        });
+}
+
+// Load all movies
+async function loadAllMovies() {
+    showLoading();
+    try {
+        const response = await fetch(`${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc`);
+        const data = await response.json();
+        displayMovies(data.results, document.getElementById('all-movies'));
+    } catch (error) {
+        console.error('Error loading all movies:', error);
+        document.getElementById('all-movies').innerHTML = '<p class="error">Failed to load movies</p>';
+    } finally {
+        hideLoading();
+    }
+}
+
+// Load recent movies
+async function loadRecentMovies() {
+    showLoading();
+    try {
+        const response = await fetch(`${BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=release_date.desc`);
+        const data = await response.json();
+        displayMovies(data.results, document.getElementById('recent-movies'));
+    } catch (error) {
+        console.error('Error loading recent movies:', error);
+        document.getElementById('recent-movies').innerHTML = '<p class="error">Failed to load movies</p>';
+    } finally {
+        hideLoading();
+    }
 }
 
 // Search functionality
@@ -320,7 +475,7 @@ async function handleSearchInput(e) {
     }
     
     try {
-        const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
+        const response = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
         const data = await response.json();
         displaySearchResults(data.results);
     } catch (error) {
@@ -335,22 +490,35 @@ function displaySearchResults(results) {
         return;
     }
     
-    searchResults.innerHTML = results.map(movie => `
-        <div class="search-result" data-movie-id="${movie.id}">
-            <img src="${movie.poster_path ? IMG_BASE_URL + movie.poster_path : 'https://via.placeholder.com/150x225?text=No+Poster'}" 
-                 alt="${movie.title}">
-            <div class="search-result-info">
-                <h3>${movie.title}</h3>
-                <p>${movie.release_date ? movie.release_date.substring(0, 4) : ''}</p>
+    searchResults.innerHTML = results.map(item => {
+        const title = item.title || item.name;
+        const date = item.release_date || item.first_air_date;
+        const poster = item.poster_path ? IMG_BASE_URL + item.poster_path : 'https://via.placeholder.com/150x225?text=No+Poster';
+        const type = item.media_type === 'tv' ? 'TV Show' : 'Movie';
+        
+        return `
+            <div class="search-result" data-id="${item.id}" data-type="${item.media_type}">
+                <img src="${poster}" alt="${title}">
+                <div class="search-result-info">
+                    <h3>${title}</h3>
+                    <p>${date ? date.substring(0, 4) : ''} • ${type}</p>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
     
     // Add click handlers to search results
     document.querySelectorAll('.search-result').forEach(result => {
         result.addEventListener('click', async () => {
-            const movieId = result.dataset.movieId;
-            await handleMovieSelection(movieId);
+            const id = result.dataset.id;
+            const type = result.dataset.type;
+            
+            if (type === 'movie') {
+                await handleMovieSelection(id);
+            } else if (type === 'tv') {
+                await handleTVSelection(id);
+            }
+            
             closeSearchModal();
         });
     });
@@ -367,6 +535,37 @@ function closeSearchModal() {
     document.body.style.overflow = 'auto';
     searchInput.value = '';
     searchResults.innerHTML = '';
+}
+
+// Notification functionality
+function toggleNotificationModal() {
+    notificationModal.classList.toggle('show');
+}
+
+function closeNotificationModal() {
+    notificationModal.classList.remove('show');
+}
+
+async function loadNotifications() {
+    try {
+        // In a real app, you would fetch notifications from your backend
+        // For demo purposes, we'll use sample notifications
+        const sampleNotifications = [
+            { id: 1, text: "New episode of your favorite show is available", date: "2025-05-01" },
+            { id: 2, text: "Check out the new releases this week", date: "2025-04-28" },
+            { id: 3, text: "Your subscription will renew in 7 days", date: "2025-04-25" }
+        ];
+        
+        notificationList.innerHTML = sampleNotifications.map(notif => `
+            <div class="notification-item">
+                <p>${notif.text}</p>
+                <small>${notif.date}</small>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading notifications:', error);
+        notificationList.innerHTML = '<p class="error">Failed to load notifications</p>';
+    }
 }
 
 // My List functionality
@@ -389,8 +588,8 @@ function toggleMyList(movie) {
         });
     }
     
-    // Reload My List section
-    loadMyList();
+    // Show toast notification
+    showToast(index === -1 ? 'Added to My List' : 'Removed from My List');
 }
 
 function loadMyList() {
@@ -406,10 +605,38 @@ function loadMyList() {
 
 // Modal functions
 function closeVideoModal() {
-    videoPlayer.pause();
+    videoPlayer.src = '';
     videoModal.style.display = 'none';
     document.body.style.overflow = 'auto';
 }
 
+// Toast notification
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
 // Start the application
-init();
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    
+    // Listen for auth state changes
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            loadNotifications();
+        }
+    });
+});
