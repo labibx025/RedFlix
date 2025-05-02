@@ -49,17 +49,41 @@
 
         <!-- Movie Sections -->
         <div class="movie-sections">
-            <h2 class="section-title">Popular on RedFlix</h2>
-            <div class="movie-row" id="popular-movies"></div>
+            <div class="section-header">
+                <h2 class="section-title">Popular on RedFlix</h2>
+            </div>
+            <div class="movie-row-container">
+                <button class="scroll-left"><i class="fas fa-chevron-left"></i></button>
+                <div class="movie-row" id="popular-movies"></div>
+                <button class="scroll-right"><i class="fas fa-chevron-right"></i></button>
+            </div>
 
-            <h2 class="section-title">Trending Now</h2>
-            <div class="movie-row" id="trending-movies"></div>
+            <div class="section-header">
+                <h2 class="section-title">Trending Now</h2>
+            </div>
+            <div class="movie-row-container">
+                <button class="scroll-left"><i class="fas fa-chevron-left"></i></button>
+                <div class="movie-row" id="trending-movies"></div>
+                <button class="scroll-right"><i class="fas fa-chevron-right"></i></button>
+            </div>
 
-            <h2 class="section-title">Top Rated</h2>
-            <div class="movie-row" id="top-rated-movies"></div>
+            <div class="section-header">
+                <h2 class="section-title">Top Rated</h2>
+            </div>
+            <div class="movie-row-container">
+                <button class="scroll-left"><i class="fas fa-chevron-left"></i></button>
+                <div class="movie-row" id="top-rated-movies"></div>
+                <button class="scroll-right"><i class="fas fa-chevron-right"></i></button>
+            </div>
 
-            <h2 class="section-title">Upcoming</h2>
-            <div class="movie-row" id="upcoming-movies"></div>
+            <div class="section-header">
+                <h2 class="section-title">Upcoming</h2>
+            </div>
+            <div class="movie-row-container">
+                <button class="scroll-left"><i class="fas fa-chevron-left"></i></button>
+                <div class="movie-row" id="upcoming-movies"></div>
+                <button class="scroll-right"><i class="fas fa-chevron-right"></i></button>
+            </div>
         </div>
     </div>
 
@@ -69,7 +93,9 @@
             <h1>My List</h1>
         </div>
         <div class="movie-sections">
-            <div class="movie-row" id="my-list-movies"></div>
+            <div class="movie-row-container">
+                <div class="movie-row" id="my-list-movies"></div>
+            </div>
         </div>
     </div>
 
@@ -79,8 +105,14 @@
             <h1>TV Shows</h1>
         </div>
         <div class="movie-sections">
-            <h2 class="section-title">Popular TV Shows</h2>
-            <div class="movie-row" id="popular-tv"></div>
+            <div class="section-header">
+                <h2 class="section-title">Popular TV Shows</h2>
+            </div>
+            <div class="movie-row-container">
+                <button class="scroll-left"><i class="fas fa-chevron-left"></i></button>
+                <div class="movie-row" id="popular-tv"></div>
+                <button class="scroll-right"><i class="fas fa-chevron-right"></i></button>
+            </div>
         </div>
     </div>
 
@@ -90,8 +122,14 @@
             <h1>Movies</h1>
         </div>
         <div class="movie-sections">
-            <h2 class="section-title">All Movies</h2>
-            <div class="movie-row" id="all-movies"></div>
+            <div class="section-header">
+                <h2 class="section-title">All Movies</h2>
+            </div>
+            <div class="movie-row-container">
+                <button class="scroll-left"><i class="fas fa-chevron-left"></i></button>
+                <div class="movie-row" id="all-movies"></div>
+                <button class="scroll-right"><i class="fas fa-chevron-right"></i></button>
+            </div>
         </div>
     </div>
 
@@ -101,8 +139,14 @@
             <h1>New & Popular</h1>
         </div>
         <div class="movie-sections">
-            <h2 class="section-title">Recently Added</h2>
-            <div class="movie-row" id="recent-movies"></div>
+            <div class="section-header">
+                <h2 class="section-title">Recently Added</h2>
+            </div>
+            <div class="movie-row-container">
+                <button class="scroll-left"><i class="fas fa-chevron-left"></i></button>
+                <div class="movie-row" id="recent-movies"></div>
+                <button class="scroll-right"><i class="fas fa-chevron-right"></i></button>
+            </div>
         </div>
     </div>
 
@@ -110,7 +154,7 @@
     <div class="search-modal" id="search-modal">
         <div class="search-container">
             <button class="close-search" id="close-search">&times;</button>
-            <input type="text" id="search-input" placeholder="Search for movies...">
+            <input type="text" id="search-input" placeholder="Search for movies, TV shows...">
             <div id="search-results"></div>
         </div>
     </div>
@@ -124,16 +168,18 @@
                 <button class="auth-tab" id="register-tab">Register</button>
             </div>
             <div class="auth-content" id="login-content">
-                <input type="email" id="login-email" placeholder="Email">
-                <input type="password" id="login-password" placeholder="Password">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <div class="forgot-password" id="forgot-password">Forgot password?</div>
                 <button id="login-btn">Login</button>
                 <button id="google-login-btn"><i class="fab fa-google"></i> Login with Google</button>
                 <p class="auth-error" id="login-error"></p>
             </div>
             <div class="auth-content" id="register-content" style="display:none;">
-                <input type="text" id="register-name" placeholder="Name">
-                <input type="email" id="register-email" placeholder="Email">
-                <input type="password" id="register-password" placeholder="Password">
+                <input type="text" id="register-name" placeholder="Full Name" required>
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Password" required>
+                <input type="password" id="register-confirm-password" placeholder="Confirm Password" required>
                 <button id="register-btn">Register</button>
                 <p class="auth-error" id="register-error"></p>
             </div>
@@ -158,14 +204,21 @@
         <div class="video-container">
             <button class="close-video" id="close-video">&times;</button>
             <div class="video-wrapper">
-                <iframe id="movie-player" frameborder="0" allowfullscreen></iframe>
+                <iframe id="movie-player" frameborder="0" allowfullscreen allow="autoplay"></iframe>
             </div>
             <div class="video-info">
                 <h2 id="video-title">Movie Title</h2>
                 <p id="video-description">Movie description will appear here.</p>
                 <div class="video-actions">
-                    <button id="play-btn"><i class="fas fa-play"></i> Play</button>
-                    <button id="add-to-list-btn"><i class="fas fa-plus"></i> My List</button>
+                    <button id="watch-trailer-btn" class="active">
+                        <i class="fas fa-play"></i> Watch Trailer
+                    </button>
+                    <button id="watch-full-movie-btn">
+                        <i class="fas fa-film"></i> Watch Full Movie
+                    </button>
+                    <button id="add-to-list-btn">
+                        <i class="fas fa-plus"></i> My List
+                    </button>
                 </div>
                 <p class="video-error" id="video-error" style="display: none;"></p>
             </div>
@@ -192,13 +245,14 @@
                     <h3>Developed by Md. Labib Hasan</h3>
                     <p class="developer-bio">
                         Computer Science and Engineering student at Daffodil International University. 
-                        Passionate about technology, always eager to discover new things in the world 
-                        of computer science and software development.
+                        Passionate about web development and creating seamless user experiences.
+                        This project was built with Firebase, TMDB API, and pure JavaScript.
                     </p>
                 </div>
             </div>
             <div class="developer-links">
                 <a href="mailto:labibhasan754@gmail.com" target="_blank"><i class="fas fa-envelope"></i> Email</a>
+                <a href="https://www.facebook.com/profile.php?id=100090562657704" target="_blank"><i class="fab fa-facebook"></i> Facebook</a>
                 <a href="https://www.linkedin.com/in/labib-hasan-b07889274" target="_blank"><i class="fab fa-linkedin"></i> LinkedIn</a>
                 <a href="https://github.com/labibhasan173" target="_blank"><i class="fab fa-github"></i> GitHub</a>
             </div>

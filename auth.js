@@ -13,6 +13,7 @@ const loginPassword = document.getElementById('login-password');
 const registerName = document.getElementById('register-name');
 const registerEmail = document.getElementById('register-email');
 const registerPassword = document.getElementById('register-password');
+const registerConfirmPassword = document.getElementById('register-confirm-password');
 const loginError = document.getElementById('login-error');
 const registerError = document.getElementById('register-error');
 const profileDropdown = document.getElementById('profile-dropdown');
@@ -30,8 +31,12 @@ const profileUpload = document.getElementById('profile-upload');
 const moviesWatched = document.getElementById('movies-watched');
 const moviesInList = document.getElementById('movies-in-list');
 const profileIcon = document.getElementById('profile-icon');
+const forgotPassword = document.getElementById('forgot-password');
 
 let currentUser = null;
+
+// Initialize Firebase Auth providers
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // Auth State Listener
 auth.onAuthStateChanged((user) => {
@@ -71,8 +76,9 @@ function setupAuthListeners() {
     
     // Auth buttons
     loginBtn.addEventListener('click', loginWithEmail);
-    googleLoginBtn.addEventListener('click', loginWithGoogle);
+    googleLoginBtn.addEventListener('click', () => loginWithProvider(googleProvider));
     registerBtn.addEventListener('click', registerWithEmail);
+    forgotPassword.addEventListener('click', resetPassword);
     
     // Profile buttons
     logoutBtn.addEventListener('click', logout);
@@ -154,16 +160,16 @@ async function loginWithEmail() {
         await auth.signInWithEmailAndPassword(email, password);
         closeAuthModal();
     } catch (error) {
-        loginError.textContent = error.message;
+        loginError.textContent = getAuthErrorMessage(error.code);
     }
 }
 
-async function loginWithGoogle() {
+async function loginWithProvider(provider) {
     try {
         await auth.signInWithPopup(provider);
         closeAuthModal();
     } catch (error) {
-        loginError.textContent = error.message;
+        loginError.textContent = getAuthErrorMessage(error.code);
     }
 }
 
@@ -171,9 +177,15 @@ async function registerWithEmail() {
     const name = registerName.value;
     const email = registerEmail.value;
     const password = registerPassword.value;
+    const confirmPassword = registerConfirmPassword.value;
     
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !confirmPassword) {
         registerError.textContent = 'Please fill in all fields';
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        registerError.textContent = 'Passwords do not match';
         return;
     }
     
@@ -197,7 +209,48 @@ async function registerWithEmail() {
         
         closeAuthModal();
     } catch (error) {
-        registerError.textContent = error.message;
+        registerError.textContent = getAuthErrorMessage(error.code);
+    }
+}
+
+async function resetPassword() {
+    const email = loginEmail.value;
+    
+    if (!email) {
+        loginError.textContent = 'Please enter your email address';
+        return;
+    }
+    
+    try {
+        await auth.sendPasswordResetEmail(email);
+        loginError.textContent = 'Password reset email sent. Check your inbox.';
+        loginError.style.color = '#4CAF50';
+    } catch (error) {
+        loginError.textContent = getAuthErrorMessage(error.code);
+        loginError.style.color = '#E50914';
+    }
+}
+
+function getAuthErrorMessage(code) {
+    switch(code) {
+        case 'auth/invalid-email':
+            return 'Invalid email address';
+        case 'auth/user-disabled':
+            return 'This account has been disabled';
+        case 'auth/user-not-found':
+            return 'No account found with this email';
+        case 'auth/wrong-password':
+            return 'Incorrect password';
+        case 'auth/email-already-in-use':
+            return 'Email already in use';
+        case 'auth/weak-password':
+            return 'Password is too weak';
+        case 'auth/operation-not-allowed':
+            return 'This operation is not allowed';
+        case 'auth/too-many-requests':
+            return 'Too many requests. Try again later.';
+        default:
+            return 'Authentication failed. Please try again.';
     }
 }
 
